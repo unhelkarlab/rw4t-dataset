@@ -28,10 +28,15 @@ def get_state(df: pd.DataFrame, num_bins:int=None) -> np.array:
     robot_status = get_robot_state(df).reshape( [-1, 1] )
     if num_bins is None:
         position = get_user_pos(df)
+        robot_position = get_user_pos(df, "RobotUnityPos")
     else:
         position = get_discrete_user_pos(df, num_bins)
-
-    return np.concatenate([position, rescue_status, robot_status], axis=1)
+        robot_position = get_discrete_user_pos(df, num_bins, "RobotUnityPos")
+    return np.concatenate([
+        position,
+        rescue_status, 
+        robot_position,
+        robot_status], axis=1)
 
 
 def get_rescue_status(df: pd.DataFrame) -> np.ndarray:
@@ -60,7 +65,7 @@ def get_rescue_status(df: pd.DataFrame) -> np.ndarray:
         return grid
         
     grid_seq = df["GridRep"]
-    for frame, grid in grid_seq.iteritems():
+    for frame, grid in grid_seq.items():
         grid = grid2numpy_(grid)
         # Check where medical kits are located
         x, y = np.where(grid == 9)
@@ -108,7 +113,7 @@ def get_robot_state(df: pd.DataFrame) -> np.ndarray:
     return robot_status.astype(int)
 
 
-def get_user_pos(df: pd.DataFrame) -> np.array:
+def get_user_pos(df: pd.DataFrame, col_name="PlayerUnityPos") -> np.array:
     """Get user position at each frame
     
     Args:
@@ -121,7 +126,7 @@ def get_user_pos(df: pd.DataFrame) -> np.array:
         0 to 80.
     """
     # Process user location in-place
-    tmp = df["PlayerUnityPos"].values
+    tmp = df[col_name].values
     user_loc = np.zeros([len(df), 2])
     for idx, loc in enumerate(tmp):
         y, _, x = loc.split("_")
@@ -132,8 +137,8 @@ def get_user_pos(df: pd.DataFrame) -> np.array:
     return user_loc
 
 
-def get_discrete_user_pos(df, num_bins):
-    positions = get_user_pos(df)
+def get_discrete_user_pos(df, num_bins, col_name="PlayerUnityPos"):
+    positions = get_user_pos(df, col_name)
     bins = np.linspace(0, 80, num_bins + 1)
     x_coord = positions[:, 0]
     y_coord = positions[:, 1]
@@ -204,7 +209,7 @@ def get_2ddiscrete_actions(states):
 def get_rescue_actions(df, state, actions):
     picks = np.where(df['ButtonsClicked'] == 'CollectButton')[0] - 1
 
-    rescue_status = state[:, 2:-1]
+    rescue_status = state[:, 2:2+6]
     idxs = np.where(np.any(rescue_status [1:] != rescue_status[:-1], axis=1)) 
     
     idxs = np.intersect1d(idxs, picks)

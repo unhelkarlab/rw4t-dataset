@@ -80,16 +80,17 @@ def transition_robot_success(states, actions):
 
 def remove_waits(states, actions: np.array, rewards):
     " Only for discretized"
-
+    # import pdb; pdb.set_trace()
     active_idx = np.where(actions != 'wait')[0]
     wait_idx = _consecutive_robot_usage(actions)
     robot_picks_idx = _robot_picks(states, actions)
-    positive_rewards = np.where(rewards>0)[0]
-    keep_idxs = np.concatenate([active_idx,
-                                wait_idx,
-                                robot_picks_idx,
-                                positive_rewards])
-    
+    positive_rewards = np.where(rewards > 0)[0]
+    keep_idxs = np.concatenate([
+        active_idx,
+        wait_idx,
+        robot_picks_idx,
+        positive_rewards])
+    keep_idxs = sorted(keep_idxs)
     return states[keep_idxs], actions[keep_idxs], rewards[keep_idxs]
 
 
