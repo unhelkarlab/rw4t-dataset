@@ -26,24 +26,22 @@ def create_video(traj):
     plt.show()
     return anim
 
-traj_dir = "dataset/trajectories"
-mdp_states = np.load(os.path.join(traj_dir,"discrete\\states.npy"))
-mdp_actions = np.load(os.path.join(traj_dir,"discrete\\actions.npy"))
-mdp_rewards = np.load(os.path.join(traj_dir,"discrete\\rewards.npy"))
-mdp_dones = np.load(os.path.join(traj_dir,"discrete\\dones.npy"))
+TRAJ_DIR = "dataset/trajectories"
+mdp_states = np.load(os.path.join(TRAJ_DIR,"continuous\\states.npy"))
+mdp_actions = np.load(os.path.join(TRAJ_DIR,"continuous\\actions.npy"), allow_pickle=True)
+mdp_rewards = np.load(os.path.join(TRAJ_DIR,"continuous\\rewards.npy"))
+mdp_dones = np.load(os.path.join(TRAJ_DIR,"continuous\\dones.npy"))
 
 # Get one single trajectory
 traj = get_trajectory(
-    mdp_states, mdp_actions, mdp_rewards, mdp_dones, traj_idx=1, continuous=False
+    mdp_states, mdp_actions, mdp_rewards, mdp_dones, traj_idx=0, continuous=True
 )
 
-ANIMATION_SPEED=100
+ANIMATION_SPEED=0.00001
 anim = create_video(traj)
 """
 TODO:
-2. Append the data into the dataclass, which holds actions, rewards, and so on. I think it's done?
-3. Check and verify that trajectories are well done
-    [Done] Why is it being repeated?
-    Why is last state not added?
-4. Compare to Franka Kitchen, and imitation style things.
+1. Append the data into the dataclass, which holds actions, rewards, and so on. I think it's done?
+2. Compare to Franka Kitchen, and imitation style things.
+3. Add data gym style or something that can be downloadable and fed into the algorithm
 """

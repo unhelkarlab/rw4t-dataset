@@ -16,17 +16,20 @@ class Rw4TImage():
     
     """
     def __init__(self, continuous=False):
-        if continuous:
-            self.normalizer=100
-        else:
-            self.normalizer=10
-
         self.continuous = continuous
         self.background = Image.open(BACKGROUND)
         self.canvas_size = np.array(self.background.size)
         self.hazard = Image.open(HAZARD_ICON).resize((self.canvas_size/10).astype(int))
         self.human = Image.open(HUMAN_ICON).resize((self.canvas_size/10).astype(int))
         self.drone = Image.open(DRONE_ICON).resize((self.canvas_size/10).astype(int))
+
+        if continuous:
+            self.normalizer=80
+            self.skew = - 0.05 * self.canvas_size
+
+        else:
+            self.normalizer=10
+            self.skew = 0
 
     def get_squashed_loc(self, state, max_loc=80):
         return state[:2] / max_loc
@@ -45,11 +48,11 @@ class Rw4TImage():
 
     def paste_human(self, canvas: Image, loc: Tuple):
         loc = loc[::]
-        canvas.paste(self.human, (loc[::-1]/self.normalizer * self.canvas_size).astype(int).tolist())
+        canvas.paste(self.human, (loc[::-1]/self.normalizer * self.canvas_size + self.skew).astype(int).tolist())
 
     def paste_robot(self, canvas: Image, loc: Tuple):
         loc = loc[::]
-        canvas.paste(self.drone, (loc[::-1]/self.normalizer * self.canvas_size).astype(int).tolist())
+        canvas.paste(self.drone, (loc[::-1]/self.normalizer * self.canvas_size + self.skew).astype(int).tolist())
     
     def paste_medical_kit(self, canvas, loc: np.ndarray):
         """loc represents xy coordinates from 0 to 1"""
