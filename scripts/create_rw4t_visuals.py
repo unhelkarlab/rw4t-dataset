@@ -43,16 +43,16 @@ class Rw4TImage():
             to fit perfectly, as the enviornment is 
             based on a 10 by 10 grid.
         """
-        loc = loc[::]
-        canvas.paste(self.hazard, (loc[::-1]/10 * self.canvas_size).astype(int).tolist())
+        # loc = loc[::-1]
+        canvas.paste(self.hazard, (loc/10 * self.canvas_size).astype(int).tolist())
 
     def paste_human(self, canvas: Image, loc: Tuple):
-        loc = loc[::]
-        canvas.paste(self.human, (loc[::-1]/self.normalizer * self.canvas_size + self.skew).astype(int).tolist())
+        # loc = loc[::-1]
+        canvas.paste(self.human, (loc/self.normalizer * self.canvas_size + self.skew).astype(int).tolist())
 
     def paste_robot(self, canvas: Image, loc: Tuple):
-        loc = loc[::]
-        canvas.paste(self.drone, (loc[::-1]/self.normalizer * self.canvas_size + self.skew).astype(int).tolist())
+        # loc = loc[::-1]
+        canvas.paste(self.drone, (loc/self.normalizer * self.canvas_size + self.skew).astype(int).tolist())
     
     def paste_medical_kit(self, canvas, loc: np.ndarray):
         """loc represents xy coordinates from 0 to 1"""

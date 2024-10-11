@@ -33,9 +33,9 @@ def get_state(df: pd.DataFrame, num_bins:int=None) -> np.array:
         position = get_discrete_user_pos(df, num_bins)
         robot_position = get_discrete_user_pos(df, num_bins, "RobotUnityPos")
     return np.concatenate([
-        position,
+        position[:, [1,0]],
         rescue_status, 
-        robot_position,
+        robot_position[:, [1,0]],
         robot_status], axis=1)
 
 
@@ -186,15 +186,21 @@ def get_2ddiscrete_actions(states):
     positions = states[:, :2]
     prev_pos = positions[:-1]
     next_pos = positions[1:]
-
+            # 0: np.array([1, 0]),  # right
+            # 1: np.array([0, 1]),  # down
+            # 2: np.array([-1, 0]),  # left
+            # 3: np.array([0, -1]),  # up
+            # 4: np.array([0, 0]),  # wait
+            # 5: np.array([-1, 1]),  # diagonal-dl
+            # 6: np.array([1, -1]),  # diagonal-ur
     res = next_pos - prev_pos
     steps = {(0,-1): 'up',
              (1,0): 'right',
              (-1,0): 'left',
              (0,1): 'down',
              (0,0): 'wait',
-             (-1,1): 'diagonal',
-             (1,-1): 'diagonal'
+             (-1,1): 'diagonal-dl',
+             (1,-1): 'diagonal-ur'
             }
     
     actions = np.zeros(len(positions)).astype(str)

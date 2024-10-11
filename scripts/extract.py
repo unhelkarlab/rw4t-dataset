@@ -23,6 +23,7 @@ def get_trial_behavior(user, trial, num_bins=None):
     states = get_state(df, num_bins=num_bins)
     actions = get_actions(df, num_bins=num_bins)
     rewards = get_rewards(df)
+    # if (states[:, 2:8]==0).all(1)
     states, actions, rewards = clean_trajectory(states, actions, rewards)
     dones = np.zeros_like(actions, dtype=int)
     dones[-1] = 1
@@ -43,14 +44,16 @@ def get_trajs(num_bins=None):
     mdp_dones = np.concatenate(mdp_dones)
     return mdp_states, mdp_actions, mdp_rewards, mdp_dones
 
-mdp_states_cont, mdp_actions_cont, mdp_rewards_cont, mdp_dones_cont = get_trajs()
-np.save(os.path.join(TRAJ_DIR,"continuous\\states"), mdp_states_cont)
-np.save(os.path.join(TRAJ_DIR,"continuous\\actions"), mdp_actions_cont, allow_pickle=True)
-np.save(os.path.join(TRAJ_DIR,"continuous\\rewards"), mdp_rewards_cont)
-np.save(os.path.join(TRAJ_DIR,"continuous\\dones"), mdp_dones_cont)
+# mdp_states_cont, mdp_actions_cont, mdp_rewards_cont, mdp_dones_cont = get_trajs()
+# np.save(os.path.join(TRAJ_DIR,"continuous\\states"), mdp_states_cont)
+# np.save(os.path.join(TRAJ_DIR,"continuous\\actions"), mdp_actions_cont, allow_pickle=True)
+# np.save(os.path.join(TRAJ_DIR,"continuous\\rewards"), mdp_rewards_cont)
+# np.save(os.path.join(TRAJ_DIR,"continuous\\dones"), mdp_dones_cont)
 # Discrete processing
-# mdp_states, mdp_actions, mdp_rewards, mdp_dones = get_trajs(num_bins=10)
-# np.save(os.path.join(TRAJ_DIR,"discrete\\states"), mdp_states, allow_pickle=False)
-# np.save(os.path.join(TRAJ_DIR,"discrete\\actions"), mdp_actions)
-# np.save(os.path.join(TRAJ_DIR,"discrete\\rewards"), mdp_rewards, allow_pickle=False)
-# np.save(os.path.join(TRAJ_DIR,"discrete\\dones"), mdp_dones, allow_pickle=False)
+mdp_states, mdp_actions, mdp_rewards, mdp_dones = get_trajs(num_bins=10)
+
+
+np.save(os.path.join(TRAJ_DIR,"discrete\\states"), mdp_states, allow_pickle=False)
+np.save(os.path.join(TRAJ_DIR,"discrete\\actions"), mdp_actions)
+np.save(os.path.join(TRAJ_DIR,"discrete\\rewards"), mdp_rewards, allow_pickle=False)
+np.save(os.path.join(TRAJ_DIR,"discrete\\dones"), mdp_dones, allow_pickle=False)

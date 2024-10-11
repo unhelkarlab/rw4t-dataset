@@ -77,11 +77,22 @@ def transition_robot_success(states, actions):
 
     return states, actions
 
+def robot_transitioned(states):
+    robot_states = states[:, 8:10]
+    transitions = robot_states[1:] - robot_states[:-1]
+    return np.where(transitions.any(1))[0]
 
 def remove_waits(states, actions: np.array, rewards):
     " Only for discretized"
     # import pdb; pdb.set_trace()
+    not_finished = np.any(states[:,2:8], 1)
+    last_ = max(np.where(not_finished)[0][-1], len(states)-1)
+    not_finished[last_] = True
+    states = states[not_finished]
+    actions = actions[not_finished]
+    rewards = rewards[not_finished]
     active_idx = np.where(actions != 'wait')[0]
+    robot_transition_idxs = robot_transitioned(states)
     wait_idx = _consecutive_robot_usage(actions)
     robot_picks_idx = _robot_picks(states, actions)
     positive_rewards = np.where(rewards > 0)[0]
@@ -89,8 +100,9 @@ def remove_waits(states, actions: np.array, rewards):
         active_idx,
         wait_idx,
         robot_picks_idx,
+        robot_transition_idxs,
         positive_rewards])
-    keep_idxs = sorted(keep_idxs)
+    keep_idxs = sorted(np.unique(keep_idxs))
     return states[keep_idxs], actions[keep_idxs], rewards[keep_idxs]
 
 
@@ -106,7 +118,7 @@ def _consecutive_robot_usage(actions):
 
 def _robot_picks(states, actions):
     """Get indexes when robot picks an object"""
-    rescue_status = states[:, 2:-1]
+    rescue_status = states[:, 2:8]
     # Get where rescue status changes, and it's not due participant's
     # collection.
     idxs = np.where(np.any(rescue_status [1:] != rescue_status[:-1], axis=1))[0]

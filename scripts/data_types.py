@@ -3,6 +3,8 @@ from copy import deepcopy as copy
 import numpy as np
 import torch
 from scripts.create_rw4t_visuals import Rw4TImage
+from imitation.data.types import TrajectoryWithRew
+
 NUM_MEDICAL_KITS = 6
 MEDICAL_KIT_IDX = np.array([
     [5, 0],
@@ -13,13 +15,13 @@ MEDICAL_KIT_IDX = np.array([
     [6, 8],
 ])
 HAZARD_LOC = np.array([
-    [ 0, 2 ],
+    [ 2, 0 ],
     [ 1, 1 ],
-    [ 2, 8 ],
-    [ 4, 7 ],
-    [ 7, 3 ],
+    [ 8, 2 ],
     [ 7, 4 ],
-    [ 7, 6 ]
+    [ 3, 7 ],
+    [ 4, 7 ],
+    [ 6, 7 ],
 ])
 
 
@@ -128,3 +130,46 @@ def get_trajectory(
         mdp_rewards[stidx:endidx],
         continuous
         )
+
+def get_trajectorywrewards(
+        mdp_states,
+        mdp_actions,
+        mdp_rewards,
+        mdp_dones,
+        traj_idx,
+    ):
+    act_to_dict = {
+        'right': 0,
+        'down': 1,
+        'left': 2, 
+        'up': 3,
+        'wait': 4,
+        'diagonal-dl': 5,
+        'diagonal-ur': 6,
+        'collect': 7,
+        'toObj0': 8,
+        'toObj1': 9,
+        'toObj2': 10,
+        'toObj3': 11,
+        'toObj4': 12,
+        'toObj5': 13
+    }
+
+    idxs = np.where(mdp_dones==1)[0]
+    if traj_idx==0:
+        stidx=0
+    else:
+        stidx=idxs[traj_idx-1] + 1
+    endidx=idxs[traj_idx]
+    
+    obs = mdp_states[stidx:endidx]
+    rews = mdp_rewards[stidx:endidx]
+    acts = [act_to_dict[act] for act in mdp_actions[stidx:endidx]]
+
+    return TrajectoryWithRew(
+        obs=obs,
+        acts=np.array(acts[:-1], dtype=int),
+        infos=None,
+        terminal=True,
+        rews=rews[:-1]
+    )
