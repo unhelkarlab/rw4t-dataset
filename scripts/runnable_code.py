@@ -128,29 +128,29 @@ picks = _robot_picks(mdp_states, mdp_actions)
 actions_r[picks] = 'collect'
 
 
-# for traj_idx in range(100):
-#     traj = get_trajectorywrewards(
-#         mdp_states,
-#         mdp_actions,
-#         mdp_rewards,
-#         mdp_dones,
-#         traj_idx=traj_idx,
-#         mdp_r_actions=None #actions_r
-#         )
-#     trajectories.append(traj)
-#     opth = get_options(traj)
-#     options_h.append(opth)
+for traj_idx in range(100):
+    traj = get_trajectorywrewards(
+        mdp_states,
+        mdp_actions,
+        mdp_rewards,
+        mdp_dones,
+        traj_idx=traj_idx,
+        mdp_r_actions=None #actions_r
+        )
+    trajectories.append(traj)
+    opth = get_options(traj)
+    options_h.append(opth)
 
 
-#     idxs = np.where(mdp_dones==1)[0]
-#     if traj_idx==0:
-#         stidx=0
-#     else:
-#         stidx=idxs[traj_idx-1] + 1
-#     endidx=idxs[traj_idx]
-#     optr = mdp_states[stidx:endidx,-1]
-#     options_r.append(optr)
-#     options.append(np.stack((opth, optr), axis=1))
+    idxs = np.where(mdp_dones==1)[0]
+    if traj_idx==0:
+        stidx=0
+    else:
+        stidx=idxs[traj_idx-1] + 1
+    endidx=idxs[traj_idx]
+    optr = mdp_states[stidx:endidx,-1]
+    options_r.append(optr)
+    options.append(np.stack((opth, optr), axis=1))
 
 N_TRAIN_TRAJ = 90
 gini = Oracle(
