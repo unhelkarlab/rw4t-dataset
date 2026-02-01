@@ -4,12 +4,13 @@ import numpy as np
 from copy import deepcopy as copy
 
 
-def clean_trajectory(states, actions, rewards):
+def clean_trajectory(states, actions, rewards, sectasks):
     states, actions = transition_robot_pause(states, actions)
     states, actions = transition_robot_success(states, actions)
+    _, _, sectasks = correct_simultaneous_moves(states, actions, sectasks)
     states, actions, rewards = correct_simultaneous_moves(states, actions, rewards)
-    states, actions, rewards = remove_waits(states, actions, rewards)
-    return states, actions, rewards
+    states, actions, rewards, sectasks = remove_waits(states, actions, rewards, sectasks)
+    return states, actions, rewards, sectasks
 
 def correct_simultaneous_moves(states, actions, rewards):
     '''Separates simultaneous movements
@@ -70,10 +71,11 @@ def transition_robot_success(states, actions):
 
     
     for idx in idxs:
+        robot_state = states[idx][-1]
         for tmp in range(idx, len(states)):
-            states[tmp][-1] = -1
-            if 'toObj' in str(actions[tmp]):
+            if robot_state != states[tmp][-1]:
                 break
+            states[tmp][-1] = -1
 
     return states, actions
 
@@ -82,15 +84,16 @@ def robot_transitioned(states):
     transitions = robot_states[1:] - robot_states[:-1]
     return np.where(transitions.any(1))[0]
 
-def remove_waits(states, actions: np.array, rewards):
+def remove_waits(states, actions: np.array, rewards, sectasks):
     " Only for discretized"
     # import pdb; pdb.set_trace()
     not_finished = np.any(states[:,2:8], 1)
-    last_ = max(np.where(not_finished)[0][-1], len(states)-1)
+    last_ = min(np.where(not_finished)[0][-1]+1, len(states)-1)
     not_finished[last_] = True
     states = states[not_finished]
     actions = actions[not_finished]
     rewards = rewards[not_finished]
+    sectasks = sectasks[not_finished]
     active_idx = np.where(actions != 'wait')[0]
     robot_transition_idxs = robot_transitioned(states)
     wait_idx = _consecutive_robot_usage(actions)
@@ -103,7 +106,7 @@ def remove_waits(states, actions: np.array, rewards):
         robot_transition_idxs,
         positive_rewards])
     keep_idxs = sorted(np.unique(keep_idxs))
-    return states[keep_idxs], actions[keep_idxs], rewards[keep_idxs]
+    return states[keep_idxs], actions[keep_idxs], rewards[keep_idxs], sectasks[keep_idxs]
 
 
 def _consecutive_robot_usage(actions):

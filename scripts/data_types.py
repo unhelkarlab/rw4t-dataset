@@ -137,6 +137,7 @@ def get_trajectorywrewards(
         mdp_rewards,
         mdp_dones,
         traj_idx,
+        mdp_r_actions=None
     ):
     act_to_dict = {
         'right': 0,
@@ -146,13 +147,7 @@ def get_trajectorywrewards(
         'wait': 4,
         'diagonal-dl': 5,
         'diagonal-ur': 6,
-        'collect': 7,
-        'toObj0': 8,
-        'toObj1': 9,
-        'toObj2': 10,
-        'toObj3': 11,
-        'toObj4': 12,
-        'toObj5': 13
+        'collect': 7
     }
 
     idxs = np.where(mdp_dones==1)[0]
@@ -165,11 +160,17 @@ def get_trajectorywrewards(
     obs = mdp_states[stidx:endidx]
     rews = mdp_rewards[stidx:endidx]
     acts = [act_to_dict[act] for act in mdp_actions[stidx:endidx]]
-
-    return TrajectoryWithRew(
+    traj = TrajectoryWithRew(
         obs=obs,
         acts=np.array(acts[:-1], dtype=int),
         infos=None,
         terminal=True,
         rews=rews[:-1]
     )
+    # workaraound to add robot actions
+    if not mdp_r_actions is None:
+        acts_r = np.array(
+            [act_to_dict[act] for act in mdp_r_actions[stidx:endidx]], dtype=int)
+        
+        object.__setattr__(traj, 'acts_r', acts_r[:-1])
+    return traj

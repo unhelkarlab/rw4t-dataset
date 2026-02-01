@@ -1,4 +1,4 @@
-
+## HERE IS WHERE DATASET IS CREATED
 from matplotlib import pyplot as plt
 from matplotlib import animation
 import numpy as np
@@ -54,22 +54,27 @@ TODO:
 3. Add data gym style or something that can be downloadable and fed into the algorithm
 """
 TRAJ_DIR = "dataset/trajectories"
-mdp_states = np.load(os.path.join(TRAJ_DIR,"discrete\\states.npy"))
-mdp_actions = np.load(os.path.join(TRAJ_DIR,"discrete\\actions.npy"), allow_pickle=True)
-mdp_rewards = np.load(os.path.join(TRAJ_DIR,"discrete\\rewards.npy"))
-mdp_dones = np.load(os.path.join(TRAJ_DIR,"discrete\\dones.npy"))
+mdp_states = np.load(os.path.join(TRAJ_DIR,"discrete\\states2.npy"))
+mdp_actions = np.load(os.path.join(TRAJ_DIR,"discrete\\actions2.npy"), allow_pickle=True)
+mdp_rewards = np.load(os.path.join(TRAJ_DIR,"discrete\\rewards2.npy"))
+mdp_dones = np.load(os.path.join(TRAJ_DIR,"discrete\\dones2.npy"))
+ids = np.load(os.path.join(TRAJ_DIR,"discrete\\ids2.npy")).reshape(-1, 2)
 
 # Get one single trajectory
 traj2 = get_trajectory(
     mdp_states, mdp_actions, mdp_rewards, mdp_dones, traj_idx=5, continuous=False
 )
 
+# Having what I have, redo to have trajectories like (s,o_r, o_h, a_r, a_h)
+
+
 ANIMATION_SPEED=100
 # anim = create_video(traj2)
 # For HBC training, creatining a gini
 trajectories = []
+options_h = []
+options_r = []
 options = []
-
 def get_options(traj):
     last_status = traj.obs[-1][2:8]
     if last_status.sum()>0:
@@ -97,16 +102,55 @@ def get_options(traj):
 
 
 
-for traj_idx in range(100):
-    traj = get_trajectorywrewards(
-        mdp_states,
-        mdp_actions,
-        mdp_rewards,
-        mdp_dones,
-        traj_idx=traj_idx
-        )
-    trajectories.append(traj)
-    options.append(get_options(traj))
+#  Add robot actions?
+positions = mdp_states[:, -3:-1]
+prev_pos = positions[:-1]
+next_pos = positions[1:]
+res = next_pos - prev_pos
+steps = {(0,-1): 'up',
+        (1,0): 'right',
+        (-1,0): 'left',
+        (0,1): 'down',
+        (0,0): 'wait'
+        }
+
+actions_r = np.zeros(len(positions)).astype(str)
+for idx, dx in enumerate(res):
+    if tuple(dx) in steps:
+        actions_r[idx] = steps[tuple(dx)]
+    else:
+        actions_r[idx] = None
+
+# Annotate last action
+actions_r[-1] = 'wait'
+from scripts.clean import _robot_picks
+picks = _robot_picks(mdp_states, mdp_actions)
+actions_r[picks] = 'collect'
+
+
+# for traj_idx in range(100):
+#     traj = get_trajectorywrewards(
+#         mdp_states,
+#         mdp_actions,
+#         mdp_rewards,
+#         mdp_dones,
+#         traj_idx=traj_idx,
+#         mdp_r_actions=None #actions_r
+#         )
+#     trajectories.append(traj)
+#     opth = get_options(traj)
+#     options_h.append(opth)
+
+
+#     idxs = np.where(mdp_dones==1)[0]
+#     if traj_idx==0:
+#         stidx=0
+#     else:
+#         stidx=idxs[traj_idx-1] + 1
+#     endidx=idxs[traj_idx]
+#     optr = mdp_states[stidx:endidx,-1]
+#     options_r.append(optr)
+#     options.append(np.stack((opth, optr), axis=1))
 
 N_TRAIN_TRAJ = 90
 gini = Oracle(
@@ -114,6 +158,30 @@ gini = Oracle(
     true_options=options[:N_TRAIN_TRAJ],
     expert_trajectories_test=trajectories[N_TRAIN_TRAJ:],
     true_options_test=options[N_TRAIN_TRAJ:],
+    # ids = ids[:N_TRAIN_TRAJ]
 )
 gini.save("/home/liubove/Documents/my-packages/rw4t-dataset/dataset/trajectories/"
-          "discrete/gini_n18")
+          "discrete/gini_n18-1090")
+
+def process_trajectory(traj):
+    team_delivery = sum(traj.obs[-1][2:8]==0)
+    human_delivery = sum(traj.acts==7)
+    robot_delivery = team_delivery - human_delivery
+    return team_delivery, robot_delivery
+
+robot_utility = []
+team_performance = []
+for traj in trajectories:
+    t, r = process_trajectory(traj)
+    team_performance.append(t)
+    robot_utility.append(r)
+import time
+for participant in range(20):
+    for task in range(5):
+        idx = participant * 5 + task
+        print(idx)
+        print("Participant: ", participant, "Task: ", task, "Robot utility: ", robot_utility[idx])
+        if not (idx+1)%5:
+            print('-------------------------')
+            time.sleep(5)
+            
