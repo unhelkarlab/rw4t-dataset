@@ -128,15 +128,20 @@ picks = _robot_picks(mdp_states, mdp_actions)
 actions_r[picks] = 'collect'
 
 
+
 for traj_idx in range(100):
-    traj = get_trajectorywrewards(
-        mdp_states,
-        mdp_actions,
-        mdp_rewards,
-        mdp_dones,
-        traj_idx=traj_idx,
-        mdp_r_actions=None #actions_r
-        )
+    try:
+        traj = get_trajectorywrewards(
+            mdp_states,
+            mdp_actions,
+            mdp_rewards,
+            mdp_dones,
+            traj_idx=traj_idx,
+            mdp_r_actions=None #actions_r
+            )
+    except KeyError as e:
+        print("A bug in the code in mdp_actions containing an action `toObj2` that isn't interpretable by the code", e)
+        continue
     trajectories.append(traj)
     opth = get_options(traj)
     options_h.append(opth)
