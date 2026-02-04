@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rw4t"
+version = "0.1.0"
+description = "rw4t"
+authors = [{ name = "Bill Qian", email = "bill.qian@rice.edu" }]
+
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib"
+]
+
+[tool.setuptools.packages.find]
+include = ["gym_envs*", "scripts*"]

@@ -1,1 +1,16 @@
+.vscode/
+.DS_Store
+
+*.pyc
+__pycache__/
+
+.pytest_cache/
+htmlcov/
+
+dist/
+build/
+instance/
+data/
+*.egg-info/
+
 dataset/
