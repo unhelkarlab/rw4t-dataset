@@ -257,7 +257,7 @@ def add_robot_moves(df, state, actions):
 
 
 # GET MDPs REWARDS #######
-def get_rewards(df, step_penalty):
+def get_rewards(df, step_penalty, danger_penalty=-10):
     """
     Get rewards from trajectories.
 
@@ -271,7 +271,7 @@ def get_rewards(df, step_penalty):
 
     # rewards = -np.ones_like(in_danger, dtype=float)
     rewards = np.full(in_danger.shape, step_penalty)
-    rewards -= 10 * (in_danger == "active").astype(int)
+    rewards += (danger_penalty) * (in_danger == "active").astype(int)
     kit_distr = ((human_distributed[1:] -
                   human_distributed[:-1]) == 1).astype(int)
     kit_distr = np.insert(kit_distr, 0, 0)
