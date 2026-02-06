@@ -1,10 +1,8 @@
-"""Auxiliary code to get data in the (inverse) reinforcement learning paradigm"""
+# Auxiliary code to get data in the (inverse) reinforcement learning paradigm
 
-import os
 import numpy as np
 import pandas as pd
 from copy import deepcopy as copy
-
 
 # Rescue World for Teams (RW4T) Configurations
 SIDE_LEN = 10
@@ -16,16 +14,16 @@ MEDICAL_KIT_IDX = {
     (3, 7): 3,
     (6, 4): 4,
     (8, 6): 5
-    }
+}
 NUM_TRIALS = 5
 
+# Get MDPs STATE #######
 
-###### Get MDPs STATE #######
 
-def get_state(df: pd.DataFrame, num_bins:int=None) -> np.array:
+def get_state(df: pd.DataFrame, num_bins: int = None) -> np.array:
     """Get continuous (or discrete) state sequence"""
     rescue_status = get_rescue_status(df)
-    robot_status = get_robot_state(df).reshape( [-1, 1] )
+    robot_status = get_robot_state(df).reshape([-1, 1])
     if num_bins is None:
         position = get_user_pos(df)
         robot_position = get_user_pos(df, "RobotUnityPos")
@@ -33,18 +31,19 @@ def get_state(df: pd.DataFrame, num_bins:int=None) -> np.array:
         position = get_discrete_user_pos(df, num_bins)
         robot_position = get_discrete_user_pos(df, num_bins, "RobotUnityPos")
     return np.concatenate([
-        position[:, [1,0]],
-        rescue_status, 
-        robot_position[:, [1,0]],
-        robot_status], axis=1)
+        position[:, [1, 0]], rescue_status, robot_position[:, [1, 0]],
+        robot_status
+    ],
+                          axis=1)
 
 
 def get_rescue_status(df: pd.DataFrame) -> np.ndarray:
-    """Get medical kit status at each frame
-    
+    """
+    Get medical kit status at each frame
+
     Args:
         df (pd.DataFrame): dataframe of a RW4T trial. Must have
-                           `GridRep` column, which contains 
+                           `GridRep` column, which contains
                            SIDE_LEN x SIDE_LEN digits separated
                            by underscores. The digits are
                            0 - walkable grids
@@ -63,7 +62,7 @@ def get_rescue_status(df: pd.DataFrame) -> np.ndarray:
         grid = np.array(grid.split("_"), dtype=int)
         grid.resize(SIDE_LEN, SIDE_LEN)
         return grid
-        
+
     grid_seq = df["GridRep"]
     for frame, grid in grid_seq.items():
         grid = grid2numpy_(grid)
@@ -79,8 +78,9 @@ def get_rescue_status(df: pd.DataFrame) -> np.ndarray:
 
 
 def get_robot_state(df: pd.DataFrame) -> np.ndarray:
-    """Get robot status at each frame
-    
+    """
+    Get robot status at each frame
+
     Args:
         df (pd.DataFrame): dataframe of a RW4T trial. Must have the
                            `RobotState` column, which contains a string
@@ -94,6 +94,7 @@ def get_robot_state(df: pd.DataFrame) -> np.ndarray:
         -1 to 5. -1 represents a Stopped robot, the rest represents
         locations of medical kits as defined in `MEDICAL_KIT_IDX`.
     """
+
     def distance(x, y):
         dx = np.abs(x[0] - y[0])
         dy = np.abs(x[1] - y[1])
@@ -108,14 +109,16 @@ def get_robot_state(df: pd.DataFrame) -> np.ndarray:
         else:
             x, y = status.split("_")
             coordinate = int(x), int(y)
-            nearest = min(MEDICAL_KIT_IDX, key=lambda x: distance(x, coordinate))
+            nearest = min(MEDICAL_KIT_IDX,
+                          key=lambda x: distance(x, coordinate))
             robot_status[idx] = MEDICAL_KIT_IDX[nearest]
     return robot_status.astype(int)
 
 
 def get_user_pos(df: pd.DataFrame, col_name="PlayerUnityPos") -> np.array:
-    """Get user position at each frame
-    
+    """
+    Get user position at each frame
+
     Args:
         df (pd.DataFrame): dataframe of a RW4T trial. Must have the
                            `PlayerUnityPos` column, 3 floating numbers
@@ -150,16 +153,16 @@ def get_discrete_user_pos(df, num_bins, col_name="PlayerUnityPos"):
     return np.concatenate([x, y], axis=1)
 
 
-#### MDPs ACTIONS
+# MDPs ACTIONS
 
 
-def get_actions(df, num_bins = None):
+def get_actions(df, num_bins=None):
     states = get_state(df, num_bins)
     if num_bins is None:
         actions = get_2dcontinuous_actions(states)
     else:
         actions = get_2ddiscrete_actions(states)
-        
+
     actions = get_rescue_actions(df, states, actions)
     # actions = add_robot_moves(df, states, actions)
 
@@ -171,38 +174,39 @@ def get_2dcontinuous_actions(states):
     prev_pos = positions[:-1]
     next_pos = positions[1:]
     res = next_pos - prev_pos
-    dx, dy = res[:,0], res[:, 1]
+    dx, dy = res[:, 0], res[:, 1]
     angle = np.arctan2(dy, dx)
     wait_idx = np.where(np.abs(dx) + np.abs(dy) == 0)
     angle = angle.astype(object)
     angle[wait_idx] = "wait"
     angle = np.insert(angle, -1, "wait")
-    
+
     return angle
 
+
 def get_2ddiscrete_actions(states):
-    """"""
 
     positions = states[:, :2]
     prev_pos = positions[:-1]
     next_pos = positions[1:]
-            # 0: np.array([1, 0]),  # right
-            # 1: np.array([0, 1]),  # down
-            # 2: np.array([-1, 0]),  # left
-            # 3: np.array([0, -1]),  # up
-            # 4: np.array([0, 0]),  # wait
-            # 5: np.array([-1, 1]),  # diagonal-dl
-            # 6: np.array([1, -1]),  # diagonal-ur
+    # 0: np.array([1, 0]),  # right
+    # 1: np.array([0, 1]),  # down
+    # 2: np.array([-1, 0]),  # left
+    # 3: np.array([0, -1]),  # up
+    # 4: np.array([0, 0]),  # wait
+    # 5: np.array([-1, 1]),  # diagonal-dl
+    # 6: np.array([1, -1]),  # diagonal-ur
     res = next_pos - prev_pos
-    steps = {(0,-1): 'up',
-             (1,0): 'right',
-             (-1,0): 'left',
-             (0,1): 'down',
-             (0,0): 'wait',
-             (-1,1): 'diagonal-dl',
-             (1,-1): 'diagonal-ur'
-            }
-    
+    steps = {
+        (0, -1): 'up',
+        (1, 0): 'right',
+        (-1, 0): 'left',
+        (0, 1): 'down',
+        (0, 0): 'wait',
+        (-1, 1): 'diagonal-dl',
+        (1, -1): 'diagonal-ur'
+    }
+
     actions = np.zeros(len(positions)).astype(str)
     for idx, dx in enumerate(res):
         actions[idx] = steps[tuple(dx)]
@@ -212,19 +216,21 @@ def get_2ddiscrete_actions(states):
 
     return actions
 
+
 def get_rescue_actions(df, state, actions):
     picks = np.where(df['ButtonsClicked'] == 'CollectButton')[0] - 1
 
-    rescue_status = state[:, 2:2+6]
-    idxs = np.where(np.any(rescue_status [1:] != rescue_status[:-1], axis=1)) 
-    
+    rescue_status = state[:, 2:2 + 6]
+    idxs = np.where(np.any(rescue_status[1:] != rescue_status[:-1], axis=1))
+
     idxs = np.intersect1d(idxs, picks)
     actions[idxs] = 'collect'
     return actions
 
 
 def add_robot_moves(df, state, actions):
-    """Check change of robot's state:
+    """
+    Check change of robot's state:
     If it was idle, it can only go to an active state,
     which is going to a medical kit that a user prompt
     it to go.
@@ -234,44 +240,46 @@ def add_robot_moves(df, state, actions):
         Be Paused by user to send to another object.
     """
     robot_state = state[:, -1].astype(int)
-    robot_state_dx = np.where(robot_state[1:] != robot_state[:-1]) 
+    robot_state_dx = np.where(robot_state[1:] != robot_state[:-1])
 
     button_clicks = df['ButtonsClicked']
     move_click = np.where(button_clicks == 'MoveButton')[0] - 1
-    
+
     idxs = np.intersect1d(robot_state_dx, move_click)
     for idx in idxs:
-        actions[idx] = 'toObj' + str(robot_state[idx+1])
+        actions[idx] = 'toObj' + str(robot_state[idx + 1])
 
     pause_click = np.where(button_clicks == 'PauseButton')[0] - 1
     idxs = np.intersect1d(robot_state_dx, pause_click)
     actions[idxs] = 'stop_robot'
-    
-    return actions   
+
+    return actions
 
 
-###### GET MDPs REWARDS #######
-def get_rewards(df):
-    """Get rewards from trajectories.
+# GET MDPs REWARDS #######
+def get_rewards(df, step_penalty):
+    """
+    Get rewards from trajectories.
 
     This function does not include rewards from secondary tasks,
-    as currently secondary tasks are not included into the 
-    action space.
+    as currently secondary tasks are not included into the action space.
 
     """
     human_distributed = df["PlayerNum"].values
     robot_distributed = df["RobotNum"].values
     in_danger = df["DangerView"].values
 
-    rewards = - np.ones_like(in_danger, dtype=float)
+    # rewards = -np.ones_like(in_danger, dtype=float)
+    rewards = np.full(in_danger.shape, step_penalty)
     rewards -= 10 * (in_danger == "active").astype(int)
-    kit_distr = ((human_distributed[1:] - human_distributed[:-1]) == 1).astype(int)
+    kit_distr = ((human_distributed[1:] -
+                  human_distributed[:-1]) == 1).astype(int)
     kit_distr = np.insert(kit_distr, 0, 0)
-    
-    robot_distr = ((robot_distributed[1:] - robot_distributed[:-1]) == 1).astype(int)
+
+    robot_distr = ((robot_distributed[1:] -
+                    robot_distributed[:-1]) == 1).astype(int)
     robot_distr = np.insert(robot_distr, 0, 0)
     rewards += 25 * (kit_distr)
     rewards += 25 * (robot_distr)
 
     return rewards
-

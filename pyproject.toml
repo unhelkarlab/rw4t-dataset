@@ -11,7 +11,11 @@ authors = [{ name = "Bill Qian", email = "bill.qian@rice.edu" }]
 dependencies = [
     "numpy",
     "pandas",
-    "matplotlib"
+    "matplotlib",
+    "torch==2.9.0",
+    "torchvision==0.24.0",
+    "torchaudio==2.9.0",
+    "imitation"
 ]
 
 [tool.setuptools.packages.find]

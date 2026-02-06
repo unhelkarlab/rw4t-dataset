@@ -15,13 +15,13 @@ MEDICAL_KIT_IDX = np.array([
     [6, 8],
 ])
 HAZARD_LOC = np.array([
-    [ 2, 0 ],
-    [ 1, 1 ],
-    [ 8, 2 ],
-    [ 7, 4 ],
-    [ 3, 7 ],
-    [ 4, 7 ],
-    [ 6, 7 ],
+    [2, 0],
+    [1, 1],
+    [8, 2],
+    [7, 4],
+    [3, 7],
+    [4, 7],
+    [6, 7],
 ])
 
 
@@ -47,18 +47,19 @@ class SingleStep:
         background = copy(viz.background)
         state = self.state
         xy_coord = state[:2]
-        med_kit = state[2:2+6]
-        robot_pos = state[2+6:-1]
-        robot = state[-1]
+        med_kit = state[2:2 + 6]
+        robot_pos = state[2 + 6:-1]
+        # robot = state[-1]
         for idx, loc in enumerate(HAZARD_LOC):
             viz.paste_hazard(background, loc)
         for idx, loc in enumerate(MEDICAL_KIT_IDX):
             if med_kit[idx]:
                 viz.paste_medical_kit(background, loc)
-        
+
         viz.paste_human(background, xy_coord)
         viz.paste_robot(background, robot_pos)
         return background
+
 
 @dataclass(frozen=True)
 class Steps:
@@ -77,7 +78,7 @@ class Steps:
         self.latents.append(step.latents)
 
     def __getitem__(self, idx):
-        
+
         st = self.states[idx]
         next_st = self.next_states[idx]
         act = self.actions[idx]
@@ -85,64 +86,48 @@ class Steps:
         lats = self.latents[idx]
 
         if isinstance(idx, int):
-            return SingleStep(
-                state=st,
-                next_state=next_st,
-                action=act,
-                reward=rew,
-                latents=lats,
-                continuous=self.continuous
-            )
+            return SingleStep(state=st,
+                              next_state=next_st,
+                              action=act,
+                              reward=rew,
+                              latents=lats,
+                              continuous=self.continuous)
         else:
-            return Steps(
-                states=st,
-                next_states=next_st,
-                actions=act,
-                rewards=rew,
-                latents=lats,
-                continuous=self.continuous
-            )
+            return Steps(states=st,
+                         next_states=next_st,
+                         actions=act,
+                         rewards=rew,
+                         latents=lats,
+                         continuous=self.continuous)
 
     def __len__(self):
         return len(self.states)
 
 
-def get_trajectory(
-        mdp_states,
-        mdp_actions,
-        mdp_rewards,
-        mdp_dones,
-        traj_idx,
-        continuous
-):
-    idxs = np.where(mdp_dones==1)[0]
-    if traj_idx==0:
-        stidx=0
+def get_trajectory(mdp_states, mdp_actions, mdp_rewards, mdp_dones, traj_idx,
+                   continuous):
+    idxs = np.where(mdp_dones == 1)[0]
+    if traj_idx == 0:
+        stidx = 0
     else:
-        stidx=idxs[traj_idx-1] + 1
-    endidx=idxs[traj_idx]
+        stidx = idxs[traj_idx - 1] + 1
+    endidx = idxs[traj_idx]
 
-    return Steps(
-        mdp_states[stidx:endidx-1],
-        mdp_states[stidx+1:endidx],
-        mdp_actions[stidx:endidx],
-        mdp_rewards[stidx:endidx],
-        mdp_rewards[stidx:endidx],
-        continuous
-        )
+    return Steps(mdp_states[stidx:endidx - 1], mdp_states[stidx + 1:endidx],
+                 mdp_actions[stidx:endidx], mdp_rewards[stidx:endidx],
+                 mdp_rewards[stidx:endidx], continuous)
 
-def get_trajectorywrewards(
-        mdp_states,
-        mdp_actions,
-        mdp_rewards,
-        mdp_dones,
-        traj_idx,
-        mdp_r_actions=None
-    ):
+
+def get_trajectorywrewards(mdp_states,
+                           mdp_actions,
+                           mdp_rewards,
+                           mdp_dones,
+                           traj_idx,
+                           mdp_r_actions=None):
     act_to_dict = {
         'right': 0,
         'down': 1,
-        'left': 2, 
+        'left': 2,
         'up': 3,
         'wait': 4,
         'diagonal-dl': 5,
@@ -150,27 +135,26 @@ def get_trajectorywrewards(
         'collect': 7
     }
 
-    idxs = np.where(mdp_dones==1)[0]
-    if traj_idx==0:
-        stidx=0
+    idxs = np.where(mdp_dones == 1)[0]
+    if traj_idx == 0:
+        stidx = 0
     else:
-        stidx=idxs[traj_idx-1] + 1
-    endidx=idxs[traj_idx]
-    
+        stidx = idxs[traj_idx - 1] + 1
+    endidx = idxs[traj_idx]
+
     obs = mdp_states[stidx:endidx]
     rews = mdp_rewards[stidx:endidx]
     acts = [act_to_dict[act] for act in mdp_actions[stidx:endidx]]
-    traj = TrajectoryWithRew(
-        obs=obs,
-        acts=np.array(acts[:-1], dtype=int),
-        infos=None,
-        terminal=True,
-        rews=rews[:-1]
-    )
+    traj = TrajectoryWithRew(obs=obs,
+                             acts=np.array(acts[:-1], dtype=int),
+                             infos=None,
+                             terminal=True,
+                             rews=rews[:-1])
     # workaraound to add robot actions
-    if not mdp_r_actions is None:
+    if mdp_r_actions is not None:
         acts_r = np.array(
-            [act_to_dict[act] for act in mdp_r_actions[stidx:endidx]], dtype=int)
-        
+            [act_to_dict[act] for act in mdp_r_actions[stidx:endidx]],
+            dtype=int)
+
         object.__setattr__(traj, 'acts_r', acts_r[:-1])
     return traj
