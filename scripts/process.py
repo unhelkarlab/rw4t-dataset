@@ -164,7 +164,7 @@ def get_actions(df, num_bins=None):
         actions = get_2ddiscrete_actions(states)
 
     actions = get_rescue_actions(df, states, actions)
-    # actions = add_robot_moves(df, states, actions)
+    actions = add_robot_moves(df, states, actions)
 
     return actions
 

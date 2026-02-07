@@ -123,7 +123,7 @@ def main(
     all_returns_avg = np.mean(all_returns, axis=0)
     all_returns_stds = np.std(all_returns, axis=0)
     for m, s in zip(all_returns_avg, all_returns_stds):
-        print(f"{m:.3f} ± {s:.3f}")
+        print(f"{m:.2f} ± {s:.2f}")
 
     return all_returns, ids
 
