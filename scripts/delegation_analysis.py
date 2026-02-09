@@ -85,6 +85,7 @@ def get_all_acts(
                 data_folder=base,
                 num_bins=num_bins,
             )
+            # print('states[0]:', states[0])
             user_states.append(states)
             user_actions.append(acts)
             user_sectasks.append(sectasks)
@@ -267,6 +268,65 @@ def delegations_to_objects_per_task(all_actions, task_idx):
     return mean_per_object, std_per_object
 
 
+def count_robot_picks_per_object_in_trajectory(states, actions):
+    """
+    Count how many times the robot picks up each object (0..NUM_OBJECTS-1)
+    in a single trajectory, using _robot_picks to find pick timesteps and
+    state changes to identify which object was picked.
+
+    Returns:
+        np.ndarray of shape (NUM_OBJECTS,) with counts per object.
+    """
+    states = np.asarray(states)
+    actions = np.atleast_1d(np.asarray(actions).ravel())
+    pick_idxs = _robot_picks(states, actions)
+    if len(pick_idxs) == 0:
+        return np.zeros(NUM_OBJECTS, dtype=np.intp)
+    rescue_status = states[:, 2:2 + NUM_OBJECTS]
+    # At each pick index, the object picked is where status goes 1 -> 0
+    obj_indices = []
+    for idx in pick_idxs:
+        if idx + 1 >= len(rescue_status):
+            continue
+        diff = rescue_status[idx] - rescue_status[idx + 1]
+        assert np.any(diff == 1)
+        obj_indices.append(np.argmax(diff))
+    return np.bincount(obj_indices, minlength=NUM_OBJECTS)
+
+
+def robot_picks_per_object_per_task(all_states, all_actions, task_idx):
+    """
+    For a given task index, compute per participant the number of times the
+    robot picks up each object, then the mean (and std) across participants
+    for each object.
+
+    Args:
+        all_states: list[participant][task] of state arrays (as returned by
+                    get_all_acts).
+        all_actions: list[participant][task] of action arrays (as returned by
+                     get_all_acts).
+        task_idx: int, index of the task (trial) to analyze.
+
+    Returns:
+        Tuple of (mean_per_object, std_per_object), each shape (NUM_OBJECTS,).
+        mean_per_object[i] is the average across participants of how many times
+        the robot picked up object i in that task.
+    """
+    counts_per_participant = np.array([
+        count_robot_picks_per_object_in_trajectory(
+            np.asarray(participant_states[task_idx]),
+            np.atleast_1d(np.asarray(participant_actions[task_idx]).ravel()),
+        ) for participant_states, participant_actions in zip(
+            all_states, all_actions)
+    ])
+    mean_per_object = np.mean(counts_per_participant, axis=0)
+    std_per_object = np.std(counts_per_participant, axis=0)
+    print(f"Robot picks per object for task {task_idx}:")
+    for obj_idx, (m, s) in enumerate(zip(mean_per_object, std_per_object)):
+        print(f"Object {obj_idx}: {m:.2f} ± {s:.2f}")
+    return mean_per_object, std_per_object
+
+
 def main(
     data_folder=None,
     trial_start=TRIAL_START,
@@ -300,6 +360,8 @@ def main(
     # print('--------------------------------')
     for task_idx in range(TRIAL_END - TRIAL_START):
         delegations_to_objects_per_task(actions, task_idx)
+        print('--------------------------------')
+        robot_picks_per_object_per_task(states, actions, task_idx)
         print('--------------------------------')
 
     return states, actions, sectasks, ids
