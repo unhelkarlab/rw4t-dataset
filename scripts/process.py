@@ -133,8 +133,10 @@ def get_user_pos(df: pd.DataFrame, col_name="PlayerUnityPos") -> np.array:
     user_loc = np.zeros([len(df), 2])
     for idx, loc in enumerate(tmp):
         y, _, x = loc.split("_")
+        # print(f'x, y pre-processing: {x}, {y}')
         x = 12 - float(x)
         y = float(y) + 4
+        # print(f'x, y post-processing: {x}, {y}')
         user_loc[idx] = x, y
 
     return user_loc

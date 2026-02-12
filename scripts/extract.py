@@ -372,8 +372,8 @@ if __name__ == "__main__":
     main(
         data_folder=DATA_FOLDER,
         traj_dir=TRAJ_DIR,
-        num_bins=10,  # Discrete processing
-        subdir="discrete",
+        num_bins=None,  # Discrete processing
+        subdir="continuous",
         suffix="2",
         trial_start=TRIAL_START,
         trial_end=TRIAL_END,
