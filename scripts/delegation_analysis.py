@@ -486,6 +486,12 @@ def robot_picks_per_object_per_task(
     print(f"Robot picks per object for task {task_idx} ({label}):")
     for obj_idx, (m, s) in enumerate(zip(mean_per_object, std_per_object)):
         print(f"Object {obj_idx}: {m:.2f} ± {s:.2f}")
+
+    if participant_indices is None:
+        if task_idx == 0:
+            print('mean per object:', mean_per_object)
+            if not os.path.exists('mean_per_object.npy'):
+                np.save('mean_per_object.npy', mean_per_object)
     return mean_per_object, std_per_object
 
 

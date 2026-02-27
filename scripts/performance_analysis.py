@@ -281,6 +281,24 @@ def main(
     top_25_avg = np.mean(all_returns[top_25_idx], axis=0)
     top_25_stds = np.std(all_returns[top_25_idx], axis=0)
 
+    n_half = max(1, n_users // 2)
+    bottom_50_idx = sorted_idx[:n_half]
+    top_50_idx = sorted_idx[-n_half:]
+    res_learning = wilcoxon(all_returns[:, 0], all_returns[:, 4])
+    print('Learning effect (Wilcoxon test):', res_learning.statistic,
+          res_learning.pvalue)
+    res_sectask = wilcoxon(all_returns[:, 3], all_returns[:, 4])
+    print('Secondary task effect (Wilcoxon test):', res_sectask.statistic,
+          res_sectask.pvalue)
+    res_sectask = wilcoxon(all_returns[bottom_50_idx, 3],
+                           all_returns[bottom_50_idx, 4])
+    print('Secondary task effect bottom 50 (Wilcoxon test):',
+          res_sectask.statistic, res_sectask.pvalue)
+    res_sectask = wilcoxon(all_returns[top_50_idx, 3], all_returns[top_50_idx,
+                                                                   4])
+    print('Secondary task effect top 50 (Wilcoxon test):',
+          res_sectask.statistic, res_sectask.pvalue)
+
     # Per-trial top/bottom 25%: for each trial, take the lowest/highest 25% of
     # scores and average
     sorted_returns = np.sort(all_returns, axis=0)
@@ -310,27 +328,27 @@ def main(
     for m, s in zip(per_trial_top_25_avg, per_trial_top_25_stds):
         print(f"  {m:.2f} ± {s:.2f}")
 
-    print('--------------------------------')
-    print('All users:')
-    compute_rew_by_secondary_task(all_rewards, all_sectasks)
-    print('Bottom 25%:')
-    compute_rew_by_secondary_task(all_rewards,
-                                  all_sectasks,
-                                  participant_indices=bottom_25_idx)
-    print('Top 25%:')
-    compute_rew_by_secondary_task(all_rewards,
-                                  all_sectasks,
-                                  participant_indices=top_25_idx)
+    # print('--------------------------------')
+    # print('All users:')
+    # compute_rew_by_secondary_task(all_rewards, all_sectasks)
+    # print('Bottom 25%:')
+    # compute_rew_by_secondary_task(all_rewards,
+    #                               all_sectasks,
+    #                               participant_indices=bottom_25_idx)
+    # print('Top 25%:')
+    # compute_rew_by_secondary_task(all_rewards,
+    #                               all_sectasks,
+    #                               participant_indices=top_25_idx)
 
-    print('By task:')
-    compute_rew_by_secondary_task_by_task(all_rewards, all_returns,
-                                          all_sectasks)
+    # print('By task:')
+    # compute_rew_by_secondary_task_by_task(all_rewards, all_returns,
+    #                                       all_sectasks)
 
     return all_returns, ids
 
 
 if __name__ == "__main__":
-    main(
+    all_returns, _ids = main(
         data_folder=DATA_FOLDER,
         trial_start=TRIAL_START,
         trial_end=TRIAL_END,
@@ -338,3 +356,5 @@ if __name__ == "__main__":
         danger_penalty=-0.1666666,
         verbose=True,
     )
+
+    # np.save('all_returns.npy', all_returns)
