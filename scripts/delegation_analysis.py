@@ -405,7 +405,7 @@ def delegations_to_objects_per_task(all_actions, task_idx):
     for obj_idx, (m, s) in enumerate(zip(mean_per_object, std_per_object)):
         print(f"Object {obj_idx}: {m:.2f} ± {s:.2f}")
 
-    return mean_per_object, std_per_object
+    return counts_per_participant
 
 
 def count_robot_picks_per_object_in_trajectory(states, actions):
@@ -492,7 +492,7 @@ def robot_picks_per_object_per_task(
             print('mean per object:', mean_per_object)
             if not os.path.exists('mean_per_object.npy'):
                 np.save('mean_per_object.npy', mean_per_object)
-    return mean_per_object, std_per_object
+    return counts_per_participant, mean_per_object, std_per_object
 
 
 def main(
@@ -619,7 +619,7 @@ def main(
             bottom_25_idx = sorted_idx[:n_quarter]
             top_25_idx = sorted_idx[-n_quarter:]
         robot_picks_per_object_per_task(states, actions, task_idx)
-        (bottom_25_robot_picks_avg,
+        (_bottom_25_robot_picks_counts, bottom_25_robot_picks_avg,
          _bottom_25_robot_picks_std) = robot_picks_per_object_per_task(
              states,
              actions,
@@ -627,7 +627,7 @@ def main(
              participant_indices=bottom_25_idx,
              label=bottom_label,
          )
-        (top_25_robot_picks_avg,
+        (_top_25_robot_picks_counts, top_25_robot_picks_avg,
          _top_25_robot_picks_std) = robot_picks_per_object_per_task(
              states,
              actions,
@@ -644,6 +644,357 @@ def main(
         print(f"  Top 25%: L1={l1_distance(top_25_robot_picks_avg, ref):.2f}, "
               f"L2={l2_distance(top_25_robot_picks_avg, ref):.2f}")
         print('--------------------------------')
+
+    # Analyze delegation counts across trials
+    if False:
+        counts_per_participant_per_obj_trial1 = delegations_to_objects_per_task(
+            actions, 0)
+        counts_per_participant_per_obj_trial4 = delegations_to_objects_per_task(
+            actions, 3)
+        counts_per_participant_per_obj_trial5 = delegations_to_objects_per_task(
+            actions, 4)
+
+        counts_per_participant_trial1 = np.sum(
+            counts_per_participant_per_obj_trial1, axis=1)
+        counts_per_participant_trial4 = np.sum(
+            counts_per_participant_per_obj_trial4, axis=1)
+        counts_per_participant_trial5 = np.sum(
+            counts_per_participant_per_obj_trial5, axis=1)
+        print('Mean counts per participant trial 1:',
+              np.mean(counts_per_participant_trial1))
+        print('Mean counts per participant trial 4:',
+              np.mean(counts_per_participant_trial4))
+        print('Mean counts per participant trial 5:',
+              np.mean(counts_per_participant_trial5))
+
+        wilcoxon_res_for_counts_1vs5 = wilcoxon(counts_per_participant_trial1,
+                                                counts_per_participant_trial5)
+        print('Wilcoxon test for counts (trial 1 vs trial 5):',
+              wilcoxon_res_for_counts_1vs5.statistic,
+              wilcoxon_res_for_counts_1vs5.pvalue)
+        wilcoxon_res_for_counts_4vs5 = wilcoxon(counts_per_participant_trial4,
+                                                counts_per_participant_trial5)
+        print('Wilcoxon test for counts (trial 4 vs trial 5):',
+              wilcoxon_res_for_counts_4vs5.statistic,
+              wilcoxon_res_for_counts_4vs5.pvalue)
+
+        sorted_idx = np.argsort(np.mean(all_returns, axis=1))
+        n_half = max(1, n_users // 2)
+        bottom_50_idx_global = sorted_idx[:n_half]
+        # top_50_idx_global = sorted_idx[-n_half:]
+
+        counts_per_participant_trial4_bottom_50 = counts_per_participant_trial4[
+            bottom_50_idx_global]
+        print('Mean counts per participant trial 4 bottom 50:',
+              np.mean(counts_per_participant_trial4_bottom_50))
+        print('Counts per participant trial 4 bottom 50:',
+              counts_per_participant_trial4_bottom_50)
+        counts_per_participant_trial5_bottom_50 = counts_per_participant_trial5[
+            bottom_50_idx_global]
+        print('Mean counts per participant trial 5 bottom 50:',
+              np.mean(counts_per_participant_trial5_bottom_50))
+        print('Counts per participant trial 5 bottom 50:',
+              counts_per_participant_trial5_bottom_50)
+        wilcoxon_res_for_counts_bottom_50_4vs5 = wilcoxon(
+            counts_per_participant_trial4_bottom_50,
+            counts_per_participant_trial5_bottom_50)
+        print('Wilcoxon test for counts bottom 50 (trial 4 vs trial 5):',
+              wilcoxon_res_for_counts_bottom_50_4vs5.statistic,
+              wilcoxon_res_for_counts_bottom_50_4vs5.pvalue)
+
+    # Per object analysis of delegations across trials
+    if False:
+        for obj_idx in range(NUM_OBJECTS):
+            print('========================================')
+            print(f'Object {obj_idx}:')
+            counts_per_participant_per_obj_trial1 = delegations_to_objects_per_task(
+                actions, 0)
+            counts_per_participant_per_obj_trial4 = delegations_to_objects_per_task(
+                actions, 3)
+            counts_per_participant_per_obj_trial5 = delegations_to_objects_per_task(
+                actions, 4)
+
+            counts_per_participant_trial1 = \
+                counts_per_participant_per_obj_trial1[:, obj_idx]
+            counts_per_participant_trial4 = \
+                counts_per_participant_per_obj_trial4[:, obj_idx]
+            counts_per_participant_trial5 = \
+                counts_per_participant_per_obj_trial5[:, obj_idx]
+            print('Mean counts per participant trial 1:',
+                  np.mean(counts_per_participant_trial1))
+            print('Mean counts per participant trial 4:',
+                  np.mean(counts_per_participant_trial4))
+            print('Mean counts per participant trial 5:',
+                  np.mean(counts_per_participant_trial5))
+
+            wilcoxon_res_for_counts_1vs5 = wilcoxon(
+                counts_per_participant_trial1, counts_per_participant_trial5)
+            print('Wilcoxon test for counts (trial 1 vs trial 5):',
+                  wilcoxon_res_for_counts_1vs5.statistic,
+                  wilcoxon_res_for_counts_1vs5.pvalue)
+            wilcoxon_res_for_counts_4vs5 = wilcoxon(
+                counts_per_participant_trial4, counts_per_participant_trial5)
+            print('Wilcoxon test for counts (trial 4 vs trial 5):',
+                  wilcoxon_res_for_counts_4vs5.statistic,
+                  wilcoxon_res_for_counts_4vs5.pvalue)
+
+            sorted_idx = np.argsort(np.mean(all_returns, axis=1))
+            n_half = max(1, n_users // 2)
+            bottom_50_idx_global = sorted_idx[:n_half]
+            # top_50_idx_global = sorted_idx[-n_half:]
+
+            counts_per_participant_trial4_bottom_50 = counts_per_participant_trial4[
+                bottom_50_idx_global]
+            print('Mean counts per participant trial 4 bottom 50:',
+                  np.mean(counts_per_participant_trial4_bottom_50))
+            print('Counts per participant trial 4 bottom 50:',
+                  counts_per_participant_trial4_bottom_50)
+            counts_per_participant_trial5_bottom_50 = counts_per_participant_trial5[
+                bottom_50_idx_global]
+            print('Mean counts per participant trial 5 bottom 50:',
+                  np.mean(counts_per_participant_trial5_bottom_50))
+            print('Counts per participant trial 5 bottom 50:',
+                  counts_per_participant_trial5_bottom_50)
+            wilcoxon_res_for_counts_bottom_50_4vs5 = wilcoxon(
+                counts_per_participant_trial4_bottom_50,
+                counts_per_participant_trial5_bottom_50)
+            print('Wilcoxon test for counts bottom 50 (trial 4 vs trial 5):',
+                  wilcoxon_res_for_counts_bottom_50_4vs5.statistic,
+                  wilcoxon_res_for_counts_bottom_50_4vs5.pvalue)
+
+    # Analyze number of robot picks across trials
+    if True:
+        robot_picks_per_participant_per_obj_trial1, _, _ = \
+            robot_picks_per_object_per_task(states, actions, 0)
+        robot_picks_per_participant_per_obj_trial2, _, _ = \
+            robot_picks_per_object_per_task(states, actions, 1)
+        robot_picks_per_participant_per_obj_trial3, _, _ = \
+            robot_picks_per_object_per_task(states, actions, 2)
+        robot_picks_per_participant_per_obj_trial4, _, _ = \
+            robot_picks_per_object_per_task(states, actions, 3)
+        robot_picks_per_participant_per_obj_trial5, _, _ = \
+            robot_picks_per_object_per_task(states, actions, 4)
+
+        counts_per_participant_trial1 = np.sum(
+            robot_picks_per_participant_per_obj_trial1, axis=1)
+        counts_per_participant_trial2 = np.sum(
+            robot_picks_per_participant_per_obj_trial2, axis=1)
+        counts_per_participant_trial3 = np.sum(
+            robot_picks_per_participant_per_obj_trial3, axis=1)
+        counts_per_participant_trial4 = np.sum(
+            robot_picks_per_participant_per_obj_trial4, axis=1)
+        counts_per_participant_trial5 = np.sum(
+            robot_picks_per_participant_per_obj_trial5, axis=1)
+        print('Mean counts per participant trial 1:',
+              np.mean(counts_per_participant_trial1))
+        print('Mean counts per participant trial 4:',
+              np.mean(counts_per_participant_trial4))
+        print('Mean counts per participant trial 5:',
+              np.mean(counts_per_participant_trial5))
+
+        average_counts_per_participant = (
+            counts_per_participant_trial1 + counts_per_participant_trial2 +
+            counts_per_participant_trial3 + counts_per_participant_trial4 +
+            counts_per_participant_trial5) / 5
+        print('Mean counts per participant:',
+              np.mean(average_counts_per_participant))
+
+        wilcoxon_res_for_counts_1vs5 = wilcoxon(counts_per_participant_trial1,
+                                                counts_per_participant_trial5)
+        print('Wilcoxon test for counts (trial 1 vs trial 5):',
+              wilcoxon_res_for_counts_1vs5.statistic,
+              wilcoxon_res_for_counts_1vs5.pvalue)
+        wilcoxon_res_for_counts_4vs5 = wilcoxon(counts_per_participant_trial4,
+                                                counts_per_participant_trial5)
+        print('Wilcoxon test for counts (trial 4 vs trial 5):',
+              wilcoxon_res_for_counts_4vs5.statistic,
+              wilcoxon_res_for_counts_4vs5.pvalue)
+
+        sorted_idx = np.argsort(np.mean(all_returns, axis=1))
+        n_half = max(1, n_users // 2)
+        print('n_half:', n_half)
+        bottom_50_idx_global = sorted_idx[:n_half]
+
+        counts_per_participant_trial4_bottom_50 = counts_per_participant_trial4[
+            bottom_50_idx_global]
+        print('Mean counts per participant trial 4 bottom 50:',
+              np.mean(counts_per_participant_trial4_bottom_50))
+        print('Counts per participant trial 4 bottom 50:',
+              counts_per_participant_trial4_bottom_50)
+        counts_per_participant_trial5_bottom_50 = counts_per_participant_trial5[
+            bottom_50_idx_global]
+        print('Mean counts per participant trial 5 bottom 50:',
+              np.mean(counts_per_participant_trial5_bottom_50))
+        print('Counts per participant trial 5 bottom 50:',
+              counts_per_participant_trial5_bottom_50)
+        wilcoxon_res_for_counts_bottom_50_4vs5 = wilcoxon(
+            counts_per_participant_trial4_bottom_50,
+            counts_per_participant_trial5_bottom_50)
+        print('Wilcoxon test for counts bottom 50 (trial 4 vs trial 5):',
+              wilcoxon_res_for_counts_bottom_50_4vs5.statistic,
+              wilcoxon_res_for_counts_bottom_50_4vs5.pvalue)
+
+    # Per object analysis of robot picks across trials
+    if False:
+        for obj_idx in range(NUM_OBJECTS):
+            print('========================================')
+            print(f'Object {obj_idx}:')
+            counts_per_participant_per_obj_trial1, _, _ = \
+                robot_picks_per_object_per_task(states, actions, 0)
+            counts_per_participant_per_obj_trial4, _, _ = \
+                robot_picks_per_object_per_task(states, actions, 3)
+            counts_per_participant_per_obj_trial5, _, _ = \
+                robot_picks_per_object_per_task(states, actions, 4)
+
+            counts_per_participant_trial1 = \
+                counts_per_participant_per_obj_trial1[:, obj_idx]
+            counts_per_participant_trial4 = \
+                counts_per_participant_per_obj_trial4[:, obj_idx]
+            counts_per_participant_trial5 = \
+                counts_per_participant_per_obj_trial5[:, obj_idx]
+            print('Mean counts per participant trial 1:',
+                  np.mean(counts_per_participant_trial1))
+            print('Mean counts per participant trial 4:',
+                  np.mean(counts_per_participant_trial4))
+            print('Mean counts per participant trial 5:',
+                  np.mean(counts_per_participant_trial5))
+
+            wilcoxon_res_for_counts_1vs5 = wilcoxon(
+                counts_per_participant_trial1, counts_per_participant_trial5)
+            print('Wilcoxon test for counts (trial 1 vs trial 5):',
+                  wilcoxon_res_for_counts_1vs5.statistic,
+                  wilcoxon_res_for_counts_1vs5.pvalue)
+            wilcoxon_res_for_counts_4vs5 = wilcoxon(
+                counts_per_participant_trial4, counts_per_participant_trial5)
+            print('Wilcoxon test for counts (trial 4 vs trial 5):',
+                  wilcoxon_res_for_counts_4vs5.statistic,
+                  wilcoxon_res_for_counts_4vs5.pvalue)
+
+            sorted_idx = np.argsort(np.mean(all_returns, axis=1))
+            n_half = max(1, n_users // 2)
+            bottom_50_idx_global = sorted_idx[:15]
+            # top_50_idx_global = sorted_idx[-n_half:]
+
+            counts_per_participant_trial1_bottom_50 = counts_per_participant_trial1[
+                bottom_50_idx_global]
+            # print('Mean counts per participant trial 1 bottom 50:',
+            #       np.mean(counts_per_participant_trial1_bottom_50))
+            # print('Counts per participant trial 1 bottom 50:',
+            #       counts_per_participant_trial1_bottom_50)
+            counts_per_participant_trial4_bottom_50 = counts_per_participant_trial4[
+                bottom_50_idx_global]
+            # print('Mean counts per participant trial 4 bottom 50:',
+            #       np.mean(counts_per_participant_trial4_bottom_50))
+            # print('Counts per participant trial 4 bottom 50:',
+            #       counts_per_participant_trial4_bottom_50)
+            counts_per_participant_trial5_bottom_50 = counts_per_participant_trial5[
+                bottom_50_idx_global]
+            # print('Mean counts per participant trial 5 bottom 50:',
+            #       np.mean(counts_per_participant_trial5_bottom_50))
+            # print('Counts per participant trial 5 bottom 50:',
+            #       counts_per_participant_trial5_bottom_50)
+
+            wilcoxon_res_for_counts_bottom_50_1vs5 = wilcoxon(
+                counts_per_participant_trial1_bottom_50,
+                counts_per_participant_trial5_bottom_50)
+            print('Wilcoxon test for counts bottom 50 (trial 1 vs trial 5):',
+                  wilcoxon_res_for_counts_bottom_50_1vs5.statistic,
+                  wilcoxon_res_for_counts_bottom_50_1vs5.pvalue)
+
+            wilcoxon_res_for_counts_bottom_50_4vs5 = wilcoxon(
+                counts_per_participant_trial4_bottom_50,
+                counts_per_participant_trial5_bottom_50)
+            print('Wilcoxon test for counts bottom 50 (trial 4 vs trial 5):',
+                  wilcoxon_res_for_counts_bottom_50_4vs5.statistic,
+                  wilcoxon_res_for_counts_bottom_50_4vs5.pvalue)
+
+    # Analyze robot pick distances across trials
+    if False:
+        robot_picks_per_participant_per_obj_trial1, _, _ = \
+            robot_picks_per_object_per_task(states, actions, 0)
+        robot_picks_per_participant_per_obj_trial2, _, _ = \
+            robot_picks_per_object_per_task(states, actions, 1)
+        robot_picks_per_participant_per_obj_trial3, _, _ = \
+            robot_picks_per_object_per_task(states, actions, 2)
+        robot_picks_per_participant_per_obj_trial4, _, _ = \
+            robot_picks_per_object_per_task(states, actions, 3)
+        robot_picks_per_participant_per_obj_trial5, _, _ = \
+            robot_picks_per_object_per_task(states, actions, 4)
+        # print('Shape of robot_picks_per_participant_per_obj_trial1:',
+        #       robot_picks_per_participant_per_obj_trial1.shape)
+        # print('Shape of robot_picks_per_participant_per_obj_trial4:',
+        #       robot_picks_per_participant_per_obj_trial4.shape)
+        # print('Shape of robot_picks_per_participant_per_obj_trial5:',
+        #       robot_picks_per_participant_per_obj_trial5.shape)
+
+        distances_1 = []
+        distances_2 = []
+        distances_3 = []
+        distances_4 = []
+        distances_5 = []
+        for i in range(len(robot_picks_per_participant_per_obj_trial1)):
+            distances_1.append(
+                l1_distance(robot_picks_per_participant_per_obj_trial1[i],
+                            ROBOT_PICKS[0]))
+            distances_2.append(
+                l1_distance(robot_picks_per_participant_per_obj_trial2[i],
+                            ROBOT_PICKS[1]))
+            distances_3.append(
+                l1_distance(robot_picks_per_participant_per_obj_trial3[i],
+                            ROBOT_PICKS[2]))
+            distances_4.append(
+                l1_distance(robot_picks_per_participant_per_obj_trial4[i],
+                            ROBOT_PICKS[3]))
+            distances_5.append(
+                l1_distance(robot_picks_per_participant_per_obj_trial5[i],
+                            ROBOT_PICKS[4]))
+
+        distances_1 = np.array(distances_1)
+        distances_2 = np.array(distances_2)
+        distances_3 = np.array(distances_3)
+        distances_4 = np.array(distances_4)
+        distances_5 = np.array(distances_5)
+
+        print('Mean distances trial 1:', np.mean(distances_1))
+        print('Mean distances trial 2:', np.mean(distances_2))
+        print('Mean distances trial 3:', np.mean(distances_3))
+        print('Mean distances trial 4:', np.mean(distances_4))
+        print('Mean distances trial 5:', np.mean(distances_5))
+
+        wilcoxon_res_for_distances_1vs5 = wilcoxon(distances_1, distances_5)
+        print('Wilcoxon test for L2 distances (trial 1 vs trial 5):',
+              wilcoxon_res_for_distances_1vs5.statistic,
+              wilcoxon_res_for_distances_1vs5.pvalue)
+        wilcoxon_res_for_distances_4vs5 = wilcoxon(distances_4, distances_5)
+        print('Wilcoxon test for L2 distances (trial 4 vs trial 5):',
+              wilcoxon_res_for_distances_4vs5.statistic,
+              wilcoxon_res_for_distances_4vs5.pvalue)
+
+        sorted_idx = np.argsort(user_means)
+        n_half = max(1, n_users // 2)
+        bottom_50_idx_global = sorted_idx[:n_half]
+
+        distances_1_bottom_50 = distances_1[bottom_50_idx_global]
+        print('Mean distances trial 1 bottom 50:',
+              np.mean(distances_1_bottom_50))
+        distances_4_bottom_50 = distances_4[bottom_50_idx_global]
+        print('Mean distances trial 4 bottom 50:',
+              np.mean(distances_4_bottom_50))
+        distances_5_bottom_50 = distances_5[bottom_50_idx_global]
+        print('Mean distances trial 5 bottom 50:',
+              np.mean(distances_5_bottom_50))
+
+        wilcoxon_res_for_distances_1vs5_bottom_50 = wilcoxon(
+            distances_1_bottom_50, distances_5_bottom_50)
+        print('Wilcoxon test for distances (trial 1 vs trial 5) bottom 50:',
+              wilcoxon_res_for_distances_1vs5_bottom_50.statistic,
+              wilcoxon_res_for_distances_1vs5_bottom_50.pvalue)
+
+        wilcoxon_res_for_distances_4vs5_bottom_50 = wilcoxon(
+            distances_4_bottom_50, distances_5_bottom_50)
+        print('Wilcoxon test for distances (trial 4 vs trial 5) bottom 50:',
+              wilcoxon_res_for_distances_4vs5_bottom_50.statistic,
+              wilcoxon_res_for_distances_4vs5_bottom_50.pvalue)
 
     return states, actions, sectasks, ids
 
